@@ -48,13 +48,15 @@ local navigation = menu.get_main_window():find_navigation(script_name)
 local combo_section = navigation:add_section("Combo settings")
 local harass_section = navigation:add_section("Harass settings")
 local other_section = navigation:add_section("Other settings")
-local drawing_section = navigation:add_section("Drawing settings")
 
 local w_to_heal_config = g_config:add_bool(false, "w_to_heal_config")
+local q_to_burg_config = g_config:add_bool(false, "w_to_heal_config")
 
-local w_combo_box = combo_section:checkbox("Use W to heal/not burst", w_to_heal_config)
+local w_combo_box = other_section:checkbox("Autoheal with W", w_to_heal_config)
+local q_combo_box = combo_section:checkbox("Use Q in combo", q_to_burg_config)
 
-w_combo_box:set_value(false)
+q_combo_box:set_value(true)
+w_combo_box:set_value(true)
 
 Combo_key = 1
 Clear_key = 3
@@ -150,7 +152,8 @@ function mySpells:qSpell()
     local target = features.target_selector:get_default_target()
     -- RengarQ buff signaling rengar has pressed q
     local qIsPressed = features.buff_cache:get_buff(g_local.index, "RengarQ")
-
+    local shouldUseQ = q_combo_box:get_value()
+    if not shouldUseQ then return false end
     if target == nil then return false end
 
     if (mode == Combo_key) and mySpells:isSpellReady('q') and qIsPressed == nil then
@@ -187,24 +190,19 @@ function mySpells:wSpell()
     if (mode == Combo_key) or (mode == Harass_key) and mySpells:isSpellReady('w') and (g_time - m_last_w_time > 0.5 and g_time - m_last_cast_time > 0.4) then
         -- leave if this is an empowered ability (sperate check for this)
         if (g_local.mana == 4) then return false end
-        -- if recent damage is higher than 100 use W
-        local recentDamage = getRecentDamageTaken()
-        local shouldUseWToHeal = w_combo_box:get_value()
-        if shouldUseWToHeal then
-            if recentDamage >= 100 then
-                castW()
-                -- cast ability
-                return false
-            end
-        end
+
 
         -- Use W to burst enemy however dont waste it so use it to combo to get EMP burst
         -- Only use W if other available abilities can combo to empowered ability otherwise use to heal
-        local burstWithOneAbility = (mySpells:isSpellReady('q') or mySpells:isSpellReady('e')) and g_local.mana == 3
-        local brustWithTwoAbilities = (mySpells:isSpellReady('q') and mySpells:isSpellReady('e')) and g_local.mana == 2
-        if brustWithTwoAbilities or burstWithOneAbility then
-            print(tostring(brustWithTwoAbilities) .. " Two abilities")
-            print(tostring(burstWithOneAbility) .. " One ability")
+
+        -- This spell checking is a quick fix, will look at later (if you see solution, give me a msg Discord: Bearded man#6950)
+        local spell_book = g_local:get_spell_book()
+        local q_slot = spell_book:get_spell_slot(e_spell_slot.q)
+        local e_slot = spell_book:get_spell_slot(e_spell_slot.q)
+
+        local burstWithOneAbility = (q_slot:is_ready() or e_slot:is_ready()) and g_local.mana == 2
+        local brustWithTwoAbilities = (q_slot:is_ready() and e_slot:is_ready()) and g_local.mana == 1
+        if brustWithTwoAbilities or burstWithOneAbility or g_local.mana == 3 then
             castW()
         end
         
@@ -213,7 +211,9 @@ function mySpells:wSpell()
     -- Always cast W if it can heal more than 350 HP (Idea, percentage HP instead?) - My thought is this would be a slider on the menu later.
     if mySpells:isSpellReady('w') and shouldUseWToHeal then
         local recentDamage = getRecentDamageTaken()
-        if recentDamage >= 350 then
+        local shouldUseWToHeal = w_combo_box:get_value()
+
+        if recentDamage >= 350 and shouldUseWToHeal then
             castW()
             return false
         end
@@ -226,16 +226,16 @@ function castW()
 
     m_last_w_time = g_time
     m_last_cast_time = g_time
-    if features.orbwalker:should_reset_aa() then
-        g_input:cast_spell(e_spell_slot.w)
-    end
+
+    -- When having 3 "mana" he uses W once and gets an empowered an then auto uses it on this, don't know a possible solution atm.
+    g_input:cast_spell(e_spell_slot.w)
 end
 
 local previousHealth = 0
 local lastTimeChecked = 0
 function getRecentDamageTaken()
     if previousHealth == 0 then
-        startingHealth = g_local.health
+        previousHealth = g_local.health
     end
     if g_time - lastTimeChecked <= 1.2 then
         return previousHealth - g_local.health
