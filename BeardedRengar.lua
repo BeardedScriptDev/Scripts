@@ -223,11 +223,12 @@ end
 function castW()
     if not (g_time - m_last_w_time >= 0.4) and (g_time - m_last_cast_time > 0.4) then return false end
 
-    m_last_w_time = g_time
-    m_last_cast_time = g_time
-
     -- When having 3 "mana" he uses W once and gets an empowered an then auto uses it on this, don't know a possible solution atm.
-    g_input:cast_spell(e_spell_slot.w)
+    if features.orbwalker:should_reset_aa() then
+        g_input:cast_spell(e_spell_slot.w)
+        m_last_w_time = g_time
+        m_last_cast_time = g_time
+    end
 end
 
 local previousHealth = 0
