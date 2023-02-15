@@ -204,8 +204,7 @@ function mySpells:wSpell()
         local brustWithTwoAbilities = (q_slot:is_ready() and e_slot:is_ready()) and g_local.mana == 1
         if brustWithTwoAbilities or burstWithOneAbility or g_local.mana == 3 then
             castW()
-        end
-        
+        end        
 
     end
     -- Always cast W if it can heal more than 350 HP (Idea, percentage HP instead?) - My thought is this would be a slider on the menu later.
