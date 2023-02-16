@@ -220,7 +220,7 @@ function mySpells:wSpell()
     return false
 end
 
-function castW()
+function castW()   
     if not (g_time - m_last_w_time >= 0.4) and (g_time - m_last_cast_time > 0.4) then return false end
 
     -- When having 3 "mana" he uses W once and gets an empowered an then auto uses it on this, don't know a possible solution atm.
